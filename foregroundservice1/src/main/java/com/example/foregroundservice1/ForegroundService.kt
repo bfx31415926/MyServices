@@ -58,7 +58,7 @@ class ForegroundService: Service() {
         }
         return START_STICKY // makes sense for a Foreground Service, or even START_REDELIVER_INTENT
     }
-ggg
+
     fun someTask() {
         Thread {
             for (i in 1..120) {
