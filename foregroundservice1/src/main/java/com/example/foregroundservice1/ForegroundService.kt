@@ -20,48 +20,47 @@ const val LOG_TAG = "myLogs"
 class ForegroundService: Service() {
 
     private lateinit var notificationManager: NotificationManager
-    // onStartCommand can be called multiple times, so we keep track of "started" state manually
-    private var isStarted = false
 
     override fun onCreate() {
         super.onCreate()
-        // initialize dependencies here (e.g. perform dependency injection)
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         Log.d(LOG_TAG, "onCreate")
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        isStarted = false
         Log.d(LOG_TAG, "onDestroy")
     }
 
     override fun onBind(intent: Intent?): IBinder? {
         Log.d(LOG_TAG, "onBind")
         return null
-//        throw UnsupportedOperationException() // bound Service is a different story
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(LOG_TAG, "onStartCommand[Begin]")
-        if (!isStarted) {
-            Log.d(LOG_TAG, "onStartCommand1")
-            makeForeground()
+        Log.d(LOG_TAG, "onStartCommand")
+        readFlags(flags)
+        makeForeground()
 
-            // place here any logic that should run just once when the Service is started
-            val demoString = intent?.getStringExtra(EXTRA_DEMO) ?: ""
-            Log.d(LOG_TAG, "demoString = $demoString")
-            someTask()
+        // place here any logic that should run just once when the Service is started
+        val demoString = intent?.getStringExtra(EXTRA_DEMO) ?: ""
+        Log.d(LOG_TAG, "demoString = $demoString")
+        someTask()
 
-            isStarted = true
-
-        }
         return START_STICKY // makes sense for a Foreground Service, or even START_REDELIVER_INTENT
+    }
+
+    fun readFlags(flags: Int) {
+        Log.d(LOG_TAG,"flags = $flags")
+        if (flags and START_FLAG_REDELIVERY == START_FLAG_REDELIVERY)
+            Log.d(LOG_TAG,"START_FLAG_REDELIVERY")
+        if (flags and START_FLAG_RETRY == START_FLAG_RETRY)
+            Log.d(LOG_TAG, "START_FLAG_RETRY")
     }
 
     fun someTask() {
         Thread {
-            for (i in 1..120) {
+            for (i in 1..20) {
                 Log.d(LOG_TAG, "i = $i")
                 try {
                     TimeUnit.SECONDS.sleep(1)
@@ -70,31 +69,26 @@ class ForegroundService: Service() {
                 }
             }
             stopSelf()
-            isStarted = false
         }.start()
     }
 
     private fun makeForeground() {
         val intent = Intent(this, MainActivity::class.java)
-        Log.d(LOG_TAG, "makeForeground1")
         val pendingIntent = PendingIntent.getActivity(
             this, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        Log.d(LOG_TAG, "makeForeground2")
         // before calling startForeground, we must create a notification and a corresponding
         // notification channel
 
         createServiceNotificationChannel()
-        Log.d(LOG_TAG, "makeForeground3")
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Foreground Service")
             .setContentText("Foreground Service demonstration")
             .setSmallIcon(R.drawable.small_icon)
             .setContentIntent(pendingIntent)
             .build()
-        Log.d(LOG_TAG, "makeForeground4")
         ServiceCompat.startForeground(this, ONGOING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        Log.d(LOG_TAG, "makeForeground5")
+//        startForeground(ONGOING_NOTIFICATION_ID, notification)
     }
     private fun createServiceNotificationChannel() {
         if (Build.VERSION.SDK_INT < 26) {

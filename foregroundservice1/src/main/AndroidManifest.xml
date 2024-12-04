@@ -26,6 +26,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync"
+            android:process=":newproc"
             />
     </application>
 
