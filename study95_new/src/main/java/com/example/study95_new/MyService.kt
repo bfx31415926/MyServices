@@ -1,4 +1,4 @@
-package com.example.foregroundservice1
+package com.example.study95_new
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -13,23 +13,30 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import com.example.study95_new.MyService.myObject.firstDelayDone
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 const val LOG_TAG = "myLogs"
 
-class ForegroundService: Service() {
-
+class MyService: Service() {
+    object myObject {
+        var firstDelayDone = false
+    }
     private lateinit var notificationManager: NotificationManager
+    private lateinit var es: ExecutorService
 
     override fun onCreate() {
         super.onCreate()
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        Log.d(LOG_TAG, "onCreate")
+        es = Executors.newFixedThreadPool(2)
+        Log.d(LOG_TAG, "MyService onCreate")
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(LOG_TAG, "onDestroy")
+        Log.d(LOG_TAG, "MyService onDestroy")
     }
 
     override fun onBind(intent: Intent?): IBinder? {
@@ -38,38 +45,52 @@ class ForegroundService: Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(LOG_TAG, "onStartCommand")
-        readFlags(flags)
+        Log.d(LOG_TAG, "MyService onStartCommand")
+
         makeForeground()
 
-        // place here any logic that should run just once when the Service is started
-        val demoString = intent?.getStringExtra(EXTRA_DEMO) ?: ""
-        Log.d(LOG_TAG, "demoString = $demoString")
-        someTask()
+        val time = intent!!.getIntExtra(MainActivity.PARAM_TIME, 1)
+        val pi = intent.getParcelableExtra<PendingIntent>(MainActivity.PARAM_PINTENT)
+        val mr = MyRun(time, startId, pi!!)
+        es.execute(mr)
+
         return super.onStartCommand(intent, flags, startId)
-//        return START_STICKY // makes sense for a Foreground Service, or even START_REDELIVER_INTENT
     }
-
-    fun readFlags(flags: Int) {
-        Log.d(LOG_TAG,"flags = $flags")
-        if (flags and START_FLAG_REDELIVERY == START_FLAG_REDELIVERY)
-            Log.d(LOG_TAG,"START_FLAG_REDELIVERY")
-        if (flags and START_FLAG_RETRY == START_FLAG_RETRY)
-            Log.d(LOG_TAG, "START_FLAG_RETRY")
-    }
-
-    fun someTask() {
-        Thread {
-            for (i in 1..20) {
-                Log.d(LOG_TAG, "i = $i")
-                try {
-                    TimeUnit.SECONDS.sleep(1)
-                } catch (e: InterruptedException) {
-                    e.printStackTrace()
+    inner class MyRun(var time: Int, var startId: Int, var pi: PendingIntent) : Runnable {
+        init {
+            Log.d(LOG_TAG, "MyRun#$startId create")
+        }
+        override fun run() {
+            Log.d(LOG_TAG, "MyRun#$startId start, time = $time")
+            try {
+                if(!firstDelayDone){
+                    TimeUnit.SECONDS.sleep(8)
+                    firstDelayDone = true;
                 }
+                // сообщаем о старте задачи
+                pi.send(MainActivity.STATUS_START)
+
+                // начинаем выполнение задачи
+                TimeUnit.SECONDS.sleep(time.toLong())
+
+                // сообщаем об окончании задачи
+                val intent = Intent().putExtra(MainActivity.PARAM_RESULT, time * 100)
+                pi.send(this@MyService, MainActivity.STATUS_FINISH, intent)
+            } catch (e: InterruptedException) {
+                e.printStackTrace()
+            } catch (e: PendingIntent.CanceledException) {
+                e.printStackTrace()
             }
-            stopSelf()
-        }.start()
+            stop()
+        }
+
+        fun stop() {
+            Log.d(
+                LOG_TAG, "MyRun#" + startId + " end, stopSelfResult("
+                        + startId + ") = " + stopSelfResult(startId)
+            )
+
+        }
     }
 
     private fun makeForeground() {
@@ -106,9 +127,7 @@ class ForegroundService: Service() {
         private const val ONGOING_NOTIFICATION_ID = 101
         private const val CHANNEL_ID = "1001"
         private const val EXTRA_DEMO = "EXTRA_DEMO"
-        fun startService(context: Context, demoString: String) {
-            val intent = Intent(context, ForegroundService::class.java)
-            intent.putExtra(EXTRA_DEMO, demoString)
+        fun startService(context: Context, intent: Intent) {
             if (Build.VERSION.SDK_INT < 26) {
                 context.startService(intent)
             } else {
@@ -116,7 +135,7 @@ class ForegroundService: Service() {
             }
         }
         fun stopService(context: Context) {
-            val intent = Intent(context, ForegroundService::class.java)
+            val intent = Intent(context, MyService::class.java)
             context.stopService(intent)
         }
     }
