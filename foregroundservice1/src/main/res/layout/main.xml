@@ -13,4 +13,12 @@
         android:onClick="onclick">
     </Button>
 
+    <Button
+        android:id="@+id/btnStop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Стоп сервиса!"
+        android:onClick="onclick">
+    </Button>
+
 </LinearLayout>

@@ -5,9 +5,13 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.media.AudioAttributes
+import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -21,6 +25,9 @@ class ForegroundService: Service() {
 
     private lateinit var notificationManager: NotificationManager
 
+    // onStartCommand can be called multiple times, so we keep track of "started" state manually
+    private var isStarted = false
+
     override fun onCreate() {
         super.onCreate()
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -29,6 +36,7 @@ class ForegroundService: Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        isStarted = false
         Log.d(LOG_TAG, "onDestroy")
     }
 
@@ -39,8 +47,12 @@ class ForegroundService: Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(LOG_TAG, "onStartCommand")
+        if (!isStarted) {
+            makeForeground()
+            isStarted = true
+        }
+
         readFlags(flags)
-        makeForeground()
 
         // place here any logic that should run just once when the Service is started
         val demoString = intent?.getStringExtra(EXTRA_DEMO) ?: ""
@@ -60,7 +72,10 @@ class ForegroundService: Service() {
 
     fun someTask() {
         Thread {
-            for (i in 1..20) {
+            for (i in 1..200) {
+                if (!isStarted)
+                    break
+
                 Log.d(LOG_TAG, "i = $i")
                 try {
                     TimeUnit.SECONDS.sleep(1)
@@ -86,9 +101,10 @@ class ForegroundService: Service() {
             .setContentText("Foreground Service demonstration")
             .setSmallIcon(R.drawable.small_icon)
             .setContentIntent(pendingIntent)
+//            .setSound(Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE+ "://" +applicationContext.getPackageName()+"/"+R.raw.my_sound))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
         ServiceCompat.startForeground(this, ONGOING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-//        startForeground(ONGOING_NOTIFICATION_ID, notification)
     }
     private fun createServiceNotificationChannel() {
         if (Build.VERSION.SDK_INT < 26) {
@@ -96,15 +112,19 @@ class ForegroundService: Service() {
         }
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Foreground Service channel",
+            CHANNEL_NAME,
             NotificationManager.IMPORTANCE_DEFAULT
         )
-        channel.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+        channel.description = CHANNEL_DESCRIPTION
+        channel.setSound(android.net.Uri.parse("android.resource://" + applicationContext.getPackageName() + "/" + R.raw.my_sound), null)
         notificationManager.createNotificationChannel(channel)
     }
+
     companion object {
         private const val ONGOING_NOTIFICATION_ID = 101
         private const val CHANNEL_ID = "1001"
+        private const val CHANNEL_NAME = "Foreground Service channel"
+        private const val CHANNEL_DESCRIPTION = "Foreground Service channel"
         private const val EXTRA_DEMO = "EXTRA_DEMO"
         fun startService(context: Context, demoString: String) {
             val intent = Intent(context, ForegroundService::class.java)
