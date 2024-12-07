@@ -4,6 +4,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -11,6 +12,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MyServices">
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -21,12 +23,19 @@
             </intent-filter>
         </activity>
         <service
-            android:name=".ForegroundService"
+            android:name=".MyService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync"
             android:process=":newproc"
             />
+        <receiver android:name="br"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PHONE_STATE"/>
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
