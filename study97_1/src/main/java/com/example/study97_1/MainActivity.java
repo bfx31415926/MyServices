@@ -13,7 +13,8 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-
+    4. Уведомление, хоть и формируется, как обычно, для ForeGround Service,
+       но не выдается. Возможно это из-за того, что сервис вызывается неявным интентом
 
  */
 package com.example.study97_1;
