@@ -19,7 +19,6 @@
  */
 package com.example.study97_1;
 
-import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
@@ -28,8 +27,9 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
+import androidx.appcompat.app.AppCompatActivity;
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
 
     final String LOG_TAG = "myLogs";
 
