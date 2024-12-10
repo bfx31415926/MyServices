@@ -80,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void onClickBind(View v) {
         Log.d(LOG_TAG, "onClickBind1");
-        bindService(intent, sConn, 0);
+        bindService(intent, sConn, BIND_AUTO_CREATE);
         Log.d(LOG_TAG, "onClickBind2");
     }
 
